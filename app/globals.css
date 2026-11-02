@@ -1,0 +1,450 @@
+@import "tailwindcss";
+
+@import "../thema/thema.css";
+@import "../thema/tailwind.css";
+
+@theme {
+  /* Huisstijl: Aptos voor platte tekst; staat het niet op de computer, dan Segoe UI of Inter */
+  --font-sans: "Aptos", "Segoe UI", var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-barlow), "Arial Narrow", sans-serif;
+
+  --breakpoint-3xl: 120rem;
+
+  --animate-verschijn: verschijn 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade: fade 220ms ease-out both;
+  --animate-paneel: paneel-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-paneel-uit: paneel-uit 200ms ease-in both;
+  --animate-sheet: sheet-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-pop: pop 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-toast: toast-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+}
+
+/* Animaties (buiten @theme, zodat ze altijd in de CSS staan) */
+@keyframes verschijn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes paneel-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes paneel-uit {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes voortgang {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes gloed {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-6%, 4%) scale(1.08);
+  }
+}
+
+html {
+  background: var(--stz-vlak);
+}
+
+body {
+  background: var(--stz-vlak);
+  color: var(--stz-inkt);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+@layer components {
+  /* Grote koppen: Barlow Condensed in hoofdletters */
+  .kop {
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-transform: uppercase;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: var(--stz-kop);
+  }
+
+  /* Klein label boven velden en secties */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--stz-inkt-4);
+  }
+
+  .knop {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.25rem;
+    padding: 0 0.875rem;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    transition:
+      background-color 150ms,
+      border-color 150ms,
+      color 150ms,
+      transform 150ms;
+    cursor: pointer;
+  }
+  .knop:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .knop:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  /* Primair: oranje, alleen voor de belangrijkste actie */
+  .knop-vol {
+    background: var(--stz-oranje);
+    color: #fff;
+  }
+  .knop-vol:hover:not(:disabled) {
+    background: var(--stz-oranje-hover);
+  }
+  /* Secundair */
+  .knop-wit {
+    background: color-mix(in oklab, var(--stz-sluier) 6%, transparent);
+    border-color: color-mix(in oklab, var(--stz-sluier) 10%, transparent);
+    color: var(--stz-inkt);
+  }
+  .knop-wit:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--stz-sluier) 11%, transparent);
+    border-color: color-mix(in oklab, var(--stz-sluier) 18%, transparent);
+  }
+  /* Zonder vlak */
+  .knop-ghost {
+    background: transparent;
+    color: var(--stz-inkt-3);
+  }
+  .knop-ghost:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--stz-sluier) 7%, transparent);
+    color: var(--stz-inkt);
+  }
+  .knop-icoon {
+    width: 2.25rem;
+    padding: 0;
+  }
+
+  .veld {
+    width: 100%;
+    min-height: 2.5rem;
+    background: color-mix(in oklab, var(--stz-sluier) 4%, transparent);
+    border: 1px solid var(--stz-veld-rand);
+    border-radius: 8px;
+    color: var(--stz-inkt);
+    padding: 0.5rem 0.75rem;
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+    transition:
+      border-color 150ms,
+      box-shadow 150ms,
+      background-color 150ms;
+  }
+  .veld:hover {
+    border-color: var(--stz-veld-rand-hover);
+  }
+  .veld:focus {
+    border-color: var(--stz-oranje);
+    box-shadow: 0 0 0 3px rgb(237 110 19 / 0.22);
+    background: color-mix(in oklab, var(--stz-sluier) 6%, transparent);
+  }
+  .veld:focus-visible {
+    outline: none;
+  }
+  .veld::placeholder {
+    color: var(--stz-inkt-5);
+  }
+  select.veld option {
+    background: var(--stz-vlak-diep);
+  }
+
+  .kaart {
+    border-radius: 12px;
+    background: color-mix(in oklab, var(--stz-vlak-kaart) 55%, transparent);
+    border: 1px solid color-mix(in oklab, var(--stz-sluier) 7%, transparent);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    height: 1.375rem;
+    padding: 0 0.5rem;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    background: color-mix(in oklab, var(--stz-sluier) 7%, transparent);
+    color: var(--stz-inkt-2);
+    white-space: nowrap;
+  }
+
+  /* Infoblokje uit de huisstijl: klein recht label in kapitalen */
+  .infoblokje {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 3px 7px 2px;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 14px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    background: var(--stz-basis-paars);
+    color: #fff;
+    white-space: nowrap;
+  }
+  .infoblokje-licht {
+    background: color-mix(in oklab, var(--stz-sluier) 9%, transparent);
+    color: var(--stz-inkt-2);
+  }
+
+  .skelet {
+    background: linear-gradient(90deg, color-mix(in oklab, var(--stz-sluier) 4%, transparent) 25%, color-mix(in oklab, var(--stz-sluier) 9%, transparent) 50%, color-mix(in oklab, var(--stz-sluier) 4%, transparent) 75%);
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+    border-radius: 10px;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--stz-oranje);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgb(237 110 19 / 0.4);
+}
+
+.geen-scrollbar {
+  scrollbar-width: none;
+}
+.geen-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.dunne-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--stz-sluier) 15%, transparent) transparent;
+}
+
+/* Langzaam bewegende gloed in de achtergrond */
+.gloed {
+  animation: gloed 18s ease-in-out infinite;
+}
+
+.voortgang {
+  transform-origin: left;
+  animation: voortgang linear forwards;
+}
+
+/* Tiles verschijnen gespreid; --i is de positie in de lijst */
+.gespreid {
+  animation: var(--animate-verschijn);
+  animation-delay: calc(min(var(--i, 0), 16) * 30ms);
+}
+
+/* Zijpaneel en sheets op de toplaag */
+dialog.paneel {
+  max-width: none;
+  max-height: none;
+}
+dialog.paneel::backdrop {
+  background: rgb(14 11 30 / 0.55);
+  backdrop-filter: blur(2px);
+  animation: var(--animate-fade);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes schud {
+  25% {
+    transform: translateX(-6px);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+
+/* Gevonden woorden in zoekresultaten */
+mark.raak {
+  background: rgb(237 110 19 / 0.22);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+  box-shadow: inset 0 -2px 0 rgb(237 110 19 / 0.65);
+}
+
+/* Organigram: lijnen tussen de vakjes */
+.org-rij {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  padding-top: 1.5rem;
+}
+.org-rij::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 1.5rem;
+  border-left: 1px solid color-mix(in oklab, var(--stz-sluier) 25%, transparent);
+}
+.org-tak {
+  position: relative;
+  padding-top: 1.5rem;
+}
+.org-tak::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 1.5rem;
+  border-left: 1px solid color-mix(in oklab, var(--stz-sluier) 25%, transparent);
+}
+.org-tak::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: calc(-0.375rem - 0.5px);
+  right: calc(-0.375rem - 0.5px);
+  border-top: 1px solid color-mix(in oklab, var(--stz-sluier) 25%, transparent);
+}
+.org-tak:first-child::after {
+  left: 50%;
+}
+.org-tak:last-child::after {
+  right: 50%;
+}
+.org-tak:only-child::after {
+  display: none;
+}
+.org-lijst {
+  position: relative;
+  margin-left: 1.25rem;
+  padding-left: 1rem;
+  border-left: 1px solid color-mix(in oklab, var(--stz-sluier) 18%, transparent);
+}
+.org-lijst > li {
+  position: relative;
+}
+.org-lijst > li::before {
+  content: "";
+  position: absolute;
+  top: 1.35rem;
+  left: -1rem;
+  width: 0.75rem;
+  border-top: 1px solid color-mix(in oklab, var(--stz-sluier) 18%, transparent);
+}
+
+/* Lijnenspel uit de huisstijl: kader met in alle vier de hoeken een schuine rand van 135 graden */
+.lijnenspel {
+  --lijn-kleur: var(--stz-basis-paars);
+  --grond: var(--stz-vlak);
+  --lijn: 1.34px;
+  --hoek: 18px;
+  isolation: isolate;
+}
+.lijnenspel::before,
+.lijnenspel::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+}
+.lijnenspel::before {
+  inset: 0;
+  background: var(--lijn-kleur);
+  clip-path: polygon(var(--hoek) 0, calc(100% - var(--hoek)) 0, 100% var(--hoek), 100% calc(100% - var(--hoek)), calc(100% - var(--hoek)) 100%, var(--hoek) 100%, 0 calc(100% - var(--hoek)), 0 var(--hoek));
+}
+.lijnenspel::after {
+  inset: var(--lijn);
+  background: var(--grond);
+  --h: calc(var(--hoek) - var(--lijn) * 0.4142);
+  clip-path: polygon(var(--h) 0, calc(100% - var(--h)) 0, 100% var(--h), 100% calc(100% - var(--h)), calc(100% - var(--h)) 100%, var(--h) 100%, 0 calc(100% - var(--h)), 0 var(--h));
+}
+.lijnenspel-op-donker {
+  --lijn-kleur: #fff;
+  --grond: var(--stz-donker-paars);
+}
+
+/* Containers die alleen focus krijgen om het toetsenbord goed te zetten, geen focusrand */
+[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
+.org-lijst-compact {
+  margin-left: 0.6rem;
+  padding-left: 0.6rem;
+}
+.org-lijst-compact > li::before {
+  left: -0.6rem;
+  width: 0.45rem;
+}

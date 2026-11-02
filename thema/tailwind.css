@@ -1,0 +1,42 @@
+/*
+  Koppelt de thema-tokens aan Tailwind CSS 4.
+  Importeer na tailwindcss en thema.css:
+
+    @import "tailwindcss";
+    @import "../thema/thema.css";
+    @import "../thema/tailwind.css";
+
+  "inline" is nodig: dan wijst elke utility direct naar de --stz-variabele
+  en werkt data-thema ook op een los element.
+*/
+@theme inline {
+  /* Rollen, wisselen mee met het thema */
+  --color-vlak: var(--stz-vlak);
+  --color-vlak-diep: var(--stz-vlak-diep);
+  --color-vlak-kaart: var(--stz-vlak-kaart);
+  --color-inkt: var(--stz-inkt);
+  --color-inkt-2: var(--stz-inkt-2);
+  --color-inkt-3: var(--stz-inkt-3);
+  --color-inkt-4: var(--stz-inkt-4);
+  --color-inkt-5: var(--stz-inkt-5);
+  --color-kop: var(--stz-kop);
+  --color-sluier: var(--stz-sluier);
+  --color-schaduw: var(--stz-schaduw);
+  --color-actie: var(--stz-actie);
+  --color-rood: var(--stz-rood);
+  --color-groen: var(--stz-groen);
+
+  /* Vaste huisstijlkleuren */
+  --color-basis-paars: var(--stz-basis-paars);
+  --color-medium-paars: var(--stz-medium-paars);
+  --color-licht-paars: var(--stz-licht-paars);
+  --color-semi-donker-paars: var(--stz-semi-donker-paars);
+  --color-donker-paars: var(--stz-donker-paars);
+  --color-oranje: var(--stz-oranje);
+  --color-oranje-hover: var(--stz-oranje-hover);
+  --color-geel: var(--stz-geel);
+}
+
+/* licht: en donker: volgen het thema van de pagina, voor uitzonderingen die je niet met een rol oplost */
+@custom-variant licht (&:where(:root[data-thema="licht"] *));
+@custom-variant donker (&:where(:root[data-thema="donker"] *));

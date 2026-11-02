@@ -1,0 +1,138 @@
+/*
+  Licht en donker thema van Stadstheater Zoetermeer
+
+  Kleuren uit het design system "Stadstheater Zoetermeer" (Huisstijl Handboek 2025).
+  Werkt in elk project, met of zonder Tailwind. Uitleg en installatie: thema/README.md.
+
+  - <html data-thema="licht"> of <html data-thema="donker"> kiest het thema.
+    Het script uit thema.ts zet dit attribuut vóór de eerste weergave, op basis van de cookie.
+  - Zonder attribuut volgt de pagina de systeeminstelling.
+  - data-thema op een los element zet alleen dat stuk in een vast thema,
+    bijvoorbeeld data-thema="donker" voor tekst op een foto.
+*/
+
+/* Vaste huisstijlkleuren: in elk thema gelijk */
+:root {
+  --stz-basis-paars: #46398e;
+  --stz-medium-paars: #9189bd;
+  --stz-licht-paars: #eae7f4;
+  --stz-semi-donker-paars: #2c2558;
+  --stz-donker-paars: #221c42;
+  --stz-oranje: #ed6e13;
+  --stz-oranje-hover: #d77112;
+  --stz-geel: #e5a009;
+  --stz-wit: #ffffff;
+  --stz-zwart: #000000;
+}
+
+/*
+  Rollen per thema
+  vlak         achtergrond van de pagina
+  vlak-diep    zijbalk, panelen, menu's en meldingen
+  vlak-kaart   kaarten en tiles
+  inkt         hoofdtekst; inkt-2 t/m inkt-5 lopen af in nadruk (alle vijf minimaal 4,5:1 op vlak)
+  kop          titels in Barlow Condensed
+  sluier       basis voor lijnen, hover-vlakken en randen, altijd met transparantie gebruiken
+  veld-rand    rand van invoervelden
+  schaduw      kleur van schaduwen
+  actie        oranje voor tekst en iconen die een actie zijn (links, knoppen zonder vlak)
+  rood, groen  status: offline en live
+*/
+
+/* Donker */
+:root,
+[data-thema="donker"] {
+  color-scheme: dark;
+  --stz-vlak: #221c42;
+  --stz-vlak-diep: #1a1534;
+  --stz-vlak-kaart: #29205a;
+  --stz-inkt: #ffffff;
+  --stz-inkt-2: #d6d4e2;
+  --stz-inkt-3: #bbb4e4;
+  --stz-inkt-4: #a29bcb;
+  --stz-inkt-5: #857eaa;
+  --stz-kop: #ffffff;
+  --stz-sluier: #ffffff;
+  --stz-veld-rand: rgb(255 255 255 / 0.1);
+  --stz-veld-rand-hover: rgb(255 255 255 / 0.18);
+  --stz-schaduw: #000000;
+  --stz-actie: #ed6e13;
+  --stz-rood: #f0524f;
+  --stz-groen: #3fc48a;
+}
+
+/*
+  Licht: wit als ondergrond, titels in basis-paars, lijnen en vlakken in tinten basis-paars.
+  Oranje tekst haalt op wit maar 3,1:1; voor kleine tekst is actie daarom een donkerder oranje.
+  Knoppen, randen en focusringen blijven het echte oranje.
+*/
+[data-thema="licht"] {
+  color-scheme: light;
+  --stz-vlak: #ffffff;
+  --stz-vlak-diep: #ffffff;
+  --stz-vlak-kaart: #ffffff;
+  --stz-inkt: #221c42;
+  --stz-inkt-2: #2c2558;
+  --stz-inkt-3: #46398e;
+  --stz-inkt-4: #5c538d;
+  --stz-inkt-5: #6a6396;
+  --stz-kop: #46398e;
+  --stz-sluier: #46398e;
+  --stz-veld-rand: #9189bd;
+  --stz-veld-rand-hover: #46398e;
+  --stz-schaduw: rgb(34 28 66 / 0.35);
+  --stz-actie: #ad4d08;
+  --stz-rood: #c4312e;
+  --stz-groen: #12784a;
+}
+
+/* Zonder keuze (of zonder JavaScript) volgt de pagina het systeem */
+@media (prefers-color-scheme: light) {
+  :root:not([data-thema]) {
+    color-scheme: light;
+    --stz-vlak: #ffffff;
+    --stz-vlak-diep: #ffffff;
+    --stz-vlak-kaart: #ffffff;
+    --stz-inkt: #221c42;
+    --stz-inkt-2: #2c2558;
+    --stz-inkt-3: #46398e;
+    --stz-inkt-4: #5c538d;
+    --stz-inkt-5: #6a6396;
+    --stz-kop: #46398e;
+    --stz-sluier: #46398e;
+    --stz-veld-rand: #9189bd;
+    --stz-veld-rand-hover: #46398e;
+    --stz-schaduw: rgb(34 28 66 / 0.35);
+    --stz-actie: #ad4d08;
+    --stz-rood: #c4312e;
+    --stz-groen: #12784a;
+  }
+}
+
+/* Een los stuk in een vast thema krijgt ook de tekstkleur van dat thema */
+[data-thema] {
+  color: var(--stz-inkt);
+}
+
+/* Alleen tonen in het licht of donker thema van de pagina (bijvoorbeeld het logo) */
+:root[data-thema="licht"] .bij-donker,
+:root[data-thema="donker"] .bij-licht {
+  display: none !important;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-thema]) .bij-donker {
+    display: none !important;
+  }
+}
+@media not (prefers-color-scheme: light) {
+  :root:not([data-thema]) .bij-licht {
+    display: none !important;
+  }
+}
+
+/* Tijdens het wisselen geen overgangen, zodat alles in één keer omslaat */
+:root[data-thema-wissel] *,
+:root[data-thema-wissel] *::before,
+:root[data-thema-wissel] *::after {
+  transition: none !important;
+}
