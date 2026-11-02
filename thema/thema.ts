@@ -22,7 +22,7 @@ export function huidigThema(): Thema {
 }
 
 /** Zet het thema direct op de pagina en bewaar de keuze een jaar in de cookie */
-export function zetThema(thema: Thema) {
+function pasThemaToe(thema: Thema) {
   const html = document.documentElement;
   html.setAttribute("data-thema-wissel", "");
   html.dataset.thema = thema;
@@ -34,4 +34,32 @@ export function zetThema(thema: Thema) {
 
   // Overgangen pas weer aan na de nieuwe weergave
   requestAnimationFrame(() => requestAnimationFrame(() => html.removeAttribute("data-thema-wissel")));
+}
+
+/**
+ * Wissel van thema. Met een oorsprong (meestal de knop) groeit het nieuwe thema als een cirkel
+ * vanuit dat punt over de pagina. Zonder View Transitions of met "minder beweging" wisselt het direct.
+ * De belofte is klaar zodra het nieuwe thema op de pagina staat.
+ */
+export function zetThema(thema: Thema, oorsprong?: { x: number; y: number }): Promise<void> {
+  const rustig = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!oorsprong || rustig || !document.startViewTransition) {
+    pasThemaToe(thema);
+    return Promise.resolve();
+  }
+
+  const { x, y } = oorsprong;
+  const straal = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+  const overgang = document.startViewTransition(() => pasThemaToe(thema));
+
+  overgang.ready
+    .then(() => {
+      document.documentElement.animate(
+        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${straal}px at ${x}px ${y}px)`] },
+        { duration: 550, easing: "cubic-bezier(0.65, 0, 0.35, 1)", pseudoElement: "::view-transition-new(root)" },
+      );
+    })
+    .catch(() => {});
+
+  return overgang.updateCallbackDone.catch(() => {});
 }

@@ -7,6 +7,7 @@ import { LockKeyhole, LogOut, Network, PanelLeftClose, PanelLeftOpen, Search, Se
 import { beheerVerlatenActie, uitloggenActie } from "@/app/actions";
 import { useShell } from "@/components/shell/AppShell";
 import { Logo } from "@/components/shell/Logo";
+import { FILTER } from "@/lib/animatie";
 import { afdelingenInVolgorde } from "@/lib/hierarchie";
 
 const SLEUTEL = "smoelenboek_zijbalk_ingeklapt";
@@ -52,6 +53,7 @@ function AfdelingenLijst() {
               <Link
                 href={aan ? "/" : `/?afdeling=${afdeling.slug}`}
                 scroll={false}
+                transitionTypes={pad === "/" ? FILTER : undefined}
                 aria-current={aan ? "true" : undefined}
                 className={`flex h-8 items-center gap-2 rounded-lg px-2.5 text-[13px] transition-colors ${
                   aan ? "bg-sluier/[0.09] font-medium text-inkt" : "text-inkt-3 hover:bg-sluier/[0.06] hover:text-inkt"

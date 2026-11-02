@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Building2, CornerDownLeft, History, Search, Sparkles, X } from "lucide-react";
 import { Markeer } from "@/components/Markeer";
 import { Portret } from "@/components/Portret";
 import { useShell } from "@/components/shell/AppShell";
+import { FILTER } from "@/lib/animatie";
 import { meervoud } from "@/lib/format";
 import { leesRecent } from "@/lib/recent";
+import { useDialoog } from "@/lib/useDialoog";
 import type { PersoonWeergave } from "@/lib/types";
 import { redenTekst, type PersoonResultaat } from "@/lib/zoeken";
 
@@ -37,6 +39,8 @@ function Zoekveld({ variant, onKlaar }: { variant: "topbalk" | "volledig"; onKla
   const lijstId = useId();
   const invoer = useRef<HTMLInputElement>(null);
   const lijst = useRef<HTMLUListElement>(null);
+  const markering = useRef<HTMLLIElement>(null);
+  const vorigeMarkering = useRef<number | null>(null);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(variant === "volledig");
   const [actief, setActief] = useState(0);
@@ -84,25 +88,49 @@ function Zoekveld({ variant, onKlaar }: { variant: "topbalk" | "volledig"; onKla
     lijst.current?.querySelector(`[data-index="${actief}"]`)?.scrollIntoView({ block: "nearest" });
   }, [actief]);
 
+  // Eén markering die naar de gekozen regel glijdt, in plaats van een vlak dat per regel aan en uit springt
+  useLayoutEffect(() => {
+    const m = markering.current;
+    const knop = lijst.current?.querySelector<HTMLElement>(`[data-index="${actief}"]`);
+    if (!m) return;
+    if (!knop) {
+      m.style.opacity = "0";
+      vorigeMarkering.current = null;
+      return;
+    }
+    const eerste = vorigeMarkering.current === null;
+    m.style.transition = eerste ? "none" : "";
+    m.style.transform = `translateY(${knop.offsetTop}px)`;
+    m.style.height = `${knop.offsetHeight}px`;
+    m.style.opacity = "1";
+    vorigeMarkering.current = knop.offsetTop;
+    if (eerste) void m.offsetHeight;
+  });
+
   function sluit() {
     setOpen(false);
     if (variant === "topbalk") invoer.current?.blur();
     onKlaar?.();
   }
 
+  /** De foto in de lijst, zodat de pop-up vanaf daar kan openen */
+  function avatarVan(id: string) {
+    return document.getElementById(`${lijstId}-${id}`)?.querySelector<HTMLElement>("[data-avatar]") ?? undefined;
+  }
+
   function kies(item: Item | undefined) {
     if (!item) return;
     switch (item.soort) {
       case "persoon":
-        openPersoon(item.r.persoon.slug, resultaat?.personen.map((r) => r.persoon.slug));
+        openPersoon(item.r.persoon.slug, resultaat?.personen.map((r) => r.persoon.slug), avatarVan(item.id));
         sluit();
         break;
       case "recent":
-        openPersoon(item.p.slug);
+        openPersoon(item.p.slug, undefined, avatarVan(item.id));
         sluit();
         break;
       case "afdeling":
-        router.push(`/?afdeling=${item.slug}`);
+        router.push(`/?afdeling=${item.slug}`, { transitionTypes: FILTER });
         sluit();
         break;
       case "suggestie":
@@ -229,13 +257,19 @@ function Zoekveld({ variant, onKlaar }: { variant: "topbalk" | "volledig"; onKla
             id={lijstId}
             ref={lijst}
             role="listbox"
-            className={`dunne-scrollbar overflow-y-auto p-2 ${variant === "topbalk" ? "max-h-[min(70vh,560px)]" : "h-full"}`}
+            className={`dunne-scrollbar relative overflow-y-auto p-2 ${variant === "topbalk" ? "max-h-[min(70vh,560px)]" : "h-full"}`}
           >
+            <li
+              ref={markering}
+              aria-hidden
+              role="presentation"
+              className="pointer-events-none absolute top-0 right-2 left-2 rounded-lg bg-sluier/[0.09] opacity-0 transition-[transform,height] duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+            />
             {items.map((item, i) => {
               const kop = kopVoor(item);
               const toonKop = kop && (i === 0 || kopVoor(items[i - 1]) !== kop);
               const aan = i === actief;
-              const basis = `flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors ${aan ? "bg-sluier/[0.09]" : ""}`;
+              const basis = "relative flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left";
               return (
                 <li key={item.id} role="presentation">
                   {toonKop && <p className="eyebrow px-2.5 pt-2 pb-1.5">{kop}</p>}
@@ -265,7 +299,7 @@ function Zoekveld({ variant, onKlaar }: { variant: "topbalk" | "volledig"; onKla
                       className={basis}
                     >
                       {item.soort === "persoon" || item.soort === "recent" ? (
-                        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-sluier/[0.06]">
+                        <span data-avatar className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-sluier/[0.06]">
                           <Portret persoon={item.soort === "persoon" ? item.r.persoon : item.p} formaat="mini" />
                         </span>
                       ) : (
@@ -336,13 +370,12 @@ export function Zoekbalk() {
 
 /** Op de telefoon: zoeken over het hele scherm */
 export function MobielZoeken({ onSluit }: { onSluit: () => void }) {
-  const dialoog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    dialoog.current?.showModal();
-  }, []);
+  const { ref: dialoog, sluit } = useDialoog();
   return (
-    <dialog ref={dialoog} onClose={onSluit} aria-label="Zoeken" className="paneel fixed inset-0 m-0 h-dvh w-full bg-vlak-diep p-0 text-inkt">
-      <Zoekveld variant="volledig" onKlaar={() => dialoog.current?.close()} />
+    <dialog ref={dialoog} onClose={onSluit} aria-label="Zoeken" className="paneel fixed inset-0 m-0 h-dvh w-full bg-transparent p-0 text-inkt">
+      <div data-paneel className="h-full animate-verschijn bg-vlak-diep">
+        <Zoekveld variant="volledig" onKlaar={() => sluit()} />
+      </div>
     </dialog>
   );
 }

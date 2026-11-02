@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, Minus, Plus } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Portret } from "@/components/Portret";
 import { useShell } from "@/components/shell/AppShell";
 import { meervoud } from "@/lib/format";
@@ -21,17 +21,17 @@ function Vakje({
   persoon: PersoonWeergave;
   vorm?: "groot" | "kolom" | "rij" | "klein";
   afdeling?: string;
-  onOpen: () => void;
+  onOpen: (bron?: HTMLElement) => void;
 }) {
   if (vorm === "kolom") {
     return (
       <button
         type="button"
-        onClick={onOpen}
+        onClick={(e) => onOpen(e.currentTarget.querySelector<HTMLElement>("[data-avatar]") ?? undefined)}
         title={`${persoon.naam}, ${persoon.functie}`}
         className="group kaart flex w-full flex-col items-center gap-2 px-2 py-3 text-center transition hover:border-oranje/70 hover:bg-sluier/[0.06]"
       >
-        <span className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-sluier/[0.06]">
+        <span data-avatar className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-sluier/[0.06]">
           <Portret persoon={persoon} formaat="mini" />
         </span>
         <span className="min-w-0">
@@ -46,11 +46,11 @@ function Vakje({
     return (
       <button
         type="button"
-        onClick={onOpen}
+        onClick={(e) => onOpen(e.currentTarget.querySelector<HTMLElement>("[data-avatar]") ?? undefined)}
         title={`${persoon.naam}, ${persoon.functie}`}
         className="group kaart flex w-full items-center gap-2 p-1.5 pr-2 text-left transition hover:border-oranje/70 hover:bg-sluier/[0.06]"
       >
-        <span className="h-8 w-8 shrink-0 overflow-hidden rounded-md bg-sluier/[0.06]">
+        <span data-avatar className="h-8 w-8 shrink-0 overflow-hidden rounded-md bg-sluier/[0.06]">
           <Portret persoon={persoon} formaat="mini" />
         </span>
         <span className="min-w-0 flex-1 hyphens-auto [overflow-wrap:anywhere]">
@@ -64,11 +64,11 @@ function Vakje({
   return (
     <button
       type="button"
-      onClick={onOpen}
+      onClick={(e) => onOpen(e.currentTarget.querySelector<HTMLElement>("[data-avatar]") ?? undefined)}
       title={`${persoon.naam}, ${persoon.functie}`}
       className={`group kaart flex w-full items-center gap-2.5 p-2 pr-3 text-left transition hover:border-oranje/70 hover:bg-sluier/[0.06] ${groot ? "max-w-xs gap-3" : ""}`}
     >
-      <span className={`shrink-0 overflow-hidden rounded-lg bg-sluier/[0.06] ${groot ? "h-14 w-14" : "h-10 w-10"}`}>
+      <span data-avatar className={`shrink-0 overflow-hidden rounded-lg bg-sluier/[0.06] ${groot ? "h-14 w-14" : "h-10 w-10"}`}>
         <Portret persoon={persoon} formaat="mini" />
       </span>
       <span className="min-w-0 flex-1">
@@ -89,7 +89,7 @@ function Lijst({
 }: {
   knopen: Knoop<PersoonWeergave>[];
   diepte: number;
-  onOpen: (p: PersoonWeergave) => void;
+  onOpen: (p: PersoonWeergave, bron?: HTMLElement) => void;
   compact?: boolean;
 }) {
   return (
@@ -101,13 +101,23 @@ function Lijst({
   );
 }
 
-function Tak({ knoop, diepte, onOpen, compact }: { knoop: Knoop<PersoonWeergave>; diepte: number; onOpen: (p: PersoonWeergave) => void; compact: boolean }) {
+function Tak({
+  knoop,
+  diepte,
+  onOpen,
+  compact,
+}: {
+  knoop: Knoop<PersoonWeergave>;
+  diepte: number;
+  onOpen: (p: PersoonWeergave, bron?: HTMLElement) => void;
+  compact: boolean;
+}) {
   const [open, setOpen] = useState(diepte < 3);
   return (
     <li>
       <div className="flex items-center gap-1">
         <div className="min-w-0 flex-1">
-          <Vakje persoon={knoop.persoon} vorm={compact ? "klein" : "rij"} onOpen={() => onOpen(knoop.persoon)} />
+          <Vakje persoon={knoop.persoon} vorm={compact ? "klein" : "rij"} onOpen={(bron) => onOpen(knoop.persoon, bron)} />
         </div>
         {knoop.kinderen.length > 0 && (
           <button
@@ -117,11 +127,21 @@ function Tak({ knoop, diepte, onOpen, compact }: { knoop: Knoop<PersoonWeergave>
             aria-expanded={open}
             aria-label={open ? `Team van ${knoop.persoon.naam} inklappen` : `Team van ${knoop.persoon.naam} uitklappen`}
           >
-            {open ? <Minus size={14} /> : <Plus size={14} />} {telOnder(knoop)}
+            <ChevronDown size={14} className={`transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${open ? "" : "-rotate-90"}`} /> {telOnder(knoop)}
           </button>
         )}
       </div>
-      {open && knoop.kinderen.length > 0 && <Lijst knopen={knoop.kinderen} diepte={diepte + 1} onOpen={onOpen} compact={compact} />}
+      {/* In- en uitklappen met een vloeiende hoogte: de rijen van het raster gaan van 0fr naar 1fr */}
+      {knoop.kinderen.length > 0 && (
+        <div
+          inert={!open}
+          className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <Lijst knopen={knoop.kinderen} diepte={diepte + 1} onOpen={onOpen} compact={compact} />
+          </div>
+        </div>
+      )}
     </li>
   );
 }
@@ -150,7 +170,7 @@ export function Organigram() {
     return uit;
   }, [toezicht, wortels]);
 
-  const open = (p: PersoonWeergave) => openPersoon(p.slug, volgorde);
+  const open = (p: PersoonWeergave, bron?: HTMLElement) => openPersoon(p.slug, volgorde, bron);
   const afdelingVan = (p: PersoonWeergave) => afdelingOpId.get(p.afdeling_id ?? "")?.naam;
   const [hoofd, ...losse] = wortels;
 
@@ -169,7 +189,7 @@ export function Organigram() {
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {toezicht.map((p) => (
                 <li key={p.id}>
-                  <Vakje persoon={p} onOpen={() => open(p)} />
+                  <Vakje persoon={p} onOpen={(b) => open(p, b)} />
                 </li>
               ))}
             </ul>
@@ -186,7 +206,7 @@ export function Organigram() {
         <section aria-label="Organisatie" className={toezicht.length ? "" : "mt-10"}>
           <div className="flex justify-center">
             <div className="w-full max-w-xs">
-              <Vakje persoon={hoofd.persoon} vorm="groot" afdeling={afdelingVan(hoofd.persoon)} onOpen={() => open(hoofd.persoon)} />
+              <Vakje persoon={hoofd.persoon} vorm="groot" afdeling={afdelingVan(hoofd.persoon)} onOpen={(b) => open(hoofd.persoon, b)} />
             </div>
           </div>
 
@@ -197,7 +217,7 @@ export function Organigram() {
                 <div className="org-rij mx-auto w-fit min-w-full">
                   {hoofd.kinderen.map((k) => (
                     <div key={k.persoon.id} className="org-tak max-w-[260px] min-w-[150px] flex-1 basis-0">
-                      <Vakje persoon={k.persoon} vorm="kolom" afdeling={afdelingVan(k.persoon)} onOpen={() => open(k.persoon)} />
+                      <Vakje persoon={k.persoon} vorm="kolom" afdeling={afdelingVan(k.persoon)} onOpen={(b) => open(k.persoon, b)} />
                       {k.kinderen.length > 0 && <Lijst knopen={k.kinderen} diepte={2} onOpen={open} compact />}
                     </div>
                   ))}
@@ -227,7 +247,7 @@ export function Organigram() {
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {losse.map((k) => (
               <li key={k.persoon.id}>
-                <Vakje persoon={k.persoon} afdeling={afdelingVan(k.persoon)} onOpen={() => open(k.persoon)} />
+                <Vakje persoon={k.persoon} afdeling={afdelingVan(k.persoon)} onOpen={(b) => open(k.persoon, b)} />
                 {k.kinderen.length > 0 && <Lijst knopen={k.kinderen} diepte={2} onOpen={open} />}
               </li>
             ))}

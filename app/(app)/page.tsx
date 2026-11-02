@@ -1,10 +1,13 @@
 import { Suspense } from "react";
 import { Overzicht } from "@/components/Overzicht";
+import { Pagina } from "@/components/Pagina";
 
 export default function SmoelenboekPagina() {
   return (
-    <Suspense fallback={null}>
-      <Overzicht />
-    </Suspense>
+    <Pagina>
+      <Suspense fallback={null}>
+        <Overzicht />
+      </Suspense>
+    </Pagina>
   );
 }

@@ -10,7 +10,7 @@ Herbruikbaar licht en donker thema in de huisstijl van Stadstheater Zoetermeer (
 | `tailwind.css` | Koppeling met Tailwind CSS 4: `bg-vlak`, `text-inkt`, `border-sluier/10`, `text-actie` enzovoort, plus de varianten `licht:` en `donker:`. |
 | `thema.ts` | Cookienaam, het script voor in `<head>`, `huidigThema()` en `zetThema()`. |
 | `ThemaScript.tsx` | Het script als React-component voor de root-layout. |
-| `ThemaKnop.tsx` | Knop met zon en maan om te wisselen. Zonder extra pakketten. |
+| `ThemaKnop.tsx` | Knop met zon en maan om te wisselen. Het nieuwe thema groeit als cirkel vanuit de knop over de pagina (View Transitions); met "minder beweging" aan of in een oudere browser wisselt het direct. Zonder extra pakketten. |
 
 ## Hoe het werkt
 

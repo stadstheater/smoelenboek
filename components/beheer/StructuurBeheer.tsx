@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowDown, ArrowUp, CircleCheck, Eye, EyeOff, Network } from "lucide-react";
 import { wijzigPlaatsActie, zetVolgordeActie } from "@/app/actions";
+import { Glijdt, metVolgorde } from "@/components/beheer/Glijdt";
 import { Portret } from "@/components/Portret";
 import { useShell } from "@/components/shell/AppShell";
 import { useToast } from "@/components/shell/Toasts";
+import { nieuwePlekken } from "@/lib/animatie";
 import { aandachtspunten, afdelingenInVolgorde, leidinggevendeMaaktRondje, sorteerPersonen } from "@/lib/hierarchie";
 import type { PersoonWeergave } from "@/lib/types";
 
@@ -17,6 +19,7 @@ export function StructuurBeheer() {
   const router = useRouter();
   const toast = useToast();
   const [bezig, startTransition] = useTransition();
+  const [schuift, setSchuift] = useState(false);
   // Direct tonen wat je kiest, ook voordat de server klaar is
   const [lokaal, setLokaal] = useState<Record<string, Partial<PersoonWeergave>>>({});
 
@@ -59,11 +62,20 @@ export function StructuurBeheer() {
     if (j < 0 || j >= leden.length) return;
     const nieuw = [...leden];
     [nieuw[i], nieuw[j]] = [nieuw[j], nieuw[i]];
-    startTransition(async () => {
-      const r = await zetVolgordeActie("personen", nieuw.map((x) => x.id));
-      if (r.fout) toast(r.fout, "fout");
-      router.refresh();
-    });
+    // Eerst op het scherm, met een glijdende overgang; daarna bewaren
+    const plekken = nieuwePlekken(nieuw);
+    metVolgorde(() => setLokaal((oud) => ({ ...oud, ...Object.fromEntries(Object.entries(plekken).map(([id, volgorde]) => [id, { ...oud[id], volgorde }])) })));
+    // Bewaren buiten de overgang om, anders wacht de glij-animatie op de server
+    setSchuift(true);
+    zetVolgordeActie(
+      "personen",
+      nieuw.map((x) => x.id),
+    )
+      .then((r) => {
+        if (r.fout) toast(r.fout, "fout");
+        router.refresh();
+      })
+      .finally(() => setSchuift(false));
   }
 
   const opties = [...gegevens.personen].sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
@@ -82,7 +94,11 @@ export function StructuurBeheer() {
           g.leden.length === 0 ? null : (
             <section key={g.id} aria-labelledby={`s-${g.id}`} className="kaart overflow-hidden">
               <div className="flex items-end gap-3 border-b border-sluier/[0.07] px-4 py-3">
-                <h2 id={`s-${g.id}`} className="min-w-0 flex-1 font-display text-[18px] font-semibold tracking-wide uppercase" style={{ paddingLeft: `${g.diepte}rem` }}>
+                <h2
+                  id={`s-${g.id}`}
+                  className="min-w-0 flex-1 font-display text-[18px] font-semibold tracking-wide uppercase"
+                  style={{ paddingLeft: `${g.diepte}rem` }}
+                >
                   {g.naam}
                 </h2>
                 <span className="eyebrow hidden w-40 md:block">Afdeling</span>
@@ -93,25 +109,38 @@ export function StructuurBeheer() {
                 {g.leden.map((p, i) => {
                   const isHoofd = p.id === g.hoofd;
                   return (
-                    <li key={p.id} className={`flex flex-wrap items-center gap-3 px-4 py-2.5 ${p.zichtbaar ? "" : "opacity-60"}`}>
-                      <div className="flex flex-col">
-                        <button type="button" disabled={bezig || i === 0} onClick={() => verschuif(g.leden, i, -1)} className="rounded p-0.5 text-inkt-4 hover:text-inkt disabled:opacity-30" aria-label={`${p.naam} omhoog`}>
-                          <ArrowUp size={13} />
-                        </button>
-                        <button type="button" disabled={bezig || i === g.leden.length - 1} onClick={() => verschuif(g.leden, i, 1)} className="rounded p-0.5 text-inkt-4 hover:text-inkt disabled:opacity-30" aria-label={`${p.naam} omlaag`}>
-                          <ArrowDown size={13} />
-                        </button>
-                      </div>
-                      <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-sluier/[0.06]">
-                        <Portret persoon={p} formaat="mini" />
-                      </span>
-                      <div className="min-w-[160px] flex-1">
-                        <p className="flex items-center gap-2 text-[13.5px] font-semibold">
-                          {p.naam} {isHoofd && <span className="infoblokje">Hoofd</span>}
-                        </p>
-                        <p className="text-[12px] text-inkt-3">{p.functie}</p>
-                      </div>
-                      <select
+                    <Glijdt key={p.id} name={`rij-${p.id}`}>
+                      <li className={`flex flex-wrap items-center gap-3 px-4 py-2.5 ${p.zichtbaar ? "" : "opacity-60"}`}>
+                        <div className="flex flex-col">
+                          <button
+                            type="button"
+                            disabled={bezig || schuift || i === 0}
+                            onClick={() => verschuif(g.leden, i, -1)}
+                            className="rounded p-0.5 text-inkt-4 hover:text-inkt disabled:opacity-30"
+                            aria-label={`${p.naam} omhoog`}
+                          >
+                            <ArrowUp size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={bezig || schuift || i === g.leden.length - 1}
+                            onClick={() => verschuif(g.leden, i, 1)}
+                            className="rounded p-0.5 text-inkt-4 hover:text-inkt disabled:opacity-30"
+                            aria-label={`${p.naam} omlaag`}
+                          >
+                            <ArrowDown size={13} />
+                          </button>
+                        </div>
+                        <span className="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-sluier/[0.06]">
+                          <Portret persoon={p} formaat="mini" />
+                        </span>
+                        <div className="min-w-[160px] flex-1">
+                          <p className="flex items-center gap-2 text-[13.5px] font-semibold">
+                            {p.naam} {isHoofd && <span className="infoblokje">Hoofd</span>}
+                          </p>
+                          <p className="text-[12px] text-inkt-3">{p.functie}</p>
+                        </div>
+                        <select
                           value={p.afdeling_id ?? ""}
                           onChange={(e) => wijzig(p, { afdeling_id: e.target.value || null })}
                           className="veld h-9 min-h-0 w-40 py-0 text-[13px]"
@@ -139,17 +168,18 @@ export function StructuurBeheer() {
                               </option>
                             ))}
                         </select>
-                      <button
-                        type="button"
-                        onClick={() => wijzig(p, { zichtbaar: !p.zichtbaar })}
-                        className="knop knop-ghost knop-icoon"
-                        aria-pressed={!p.zichtbaar}
-                        aria-label={p.zichtbaar ? `${p.naam} verbergen` : `${p.naam} weer tonen`}
-                        title={p.zichtbaar ? "Zichtbaar; klik om te verbergen" : "Verborgen; klik om te tonen"}
-                      >
-                        {p.zichtbaar ? <Eye size={16} /> : <EyeOff size={16} />}
-                      </button>
-                    </li>
+                        <button
+                          type="button"
+                          onClick={() => wijzig(p, { zichtbaar: !p.zichtbaar })}
+                          className="knop knop-ghost knop-icoon"
+                          aria-pressed={!p.zichtbaar}
+                          aria-label={p.zichtbaar ? `${p.naam} verbergen` : `${p.naam} weer tonen`}
+                          title={p.zichtbaar ? "Zichtbaar; klik om te verbergen" : "Verborgen; klik om te tonen"}
+                        >
+                          {p.zichtbaar ? <Eye size={16} /> : <EyeOff size={16} />}
+                        </button>
+                      </li>
+                    </Glijdt>
                   );
                 })}
               </ul>

@@ -199,12 +199,12 @@ export function Zoekresultaten() {
                   const redenen = r.redenen.filter((x) => (x.veld !== "naam" && x.veld !== "functie") || x.via);
                   return (
                     <li key={p.id} className="gespreid" style={{ "--i": i } as React.CSSProperties}>
-                      <div className="kaart flex items-start gap-4 p-3 transition-colors hover:bg-sluier/[0.05]">
-                        <button type="button" onClick={() => openPersoon(p.slug, volgorde)} className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-sluier/[0.06]" aria-label={`${p.naam} openen`}>
+                      <div data-kaart className="kaart flex items-start gap-4 p-3 transition-colors hover:bg-sluier/[0.05]">
+                        <button type="button" onClick={(e) => openPersoon(p.slug, volgorde, e.currentTarget.closest("[data-kaart]")?.querySelector<HTMLElement>("[data-avatar]") ?? undefined)} data-avatar className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-sluier/[0.06] transition-transform duration-300 hover:scale-[1.04]" aria-label={`${p.naam} openen`}>
                           <Portret persoon={p} />
                         </button>
                         <div className="min-w-0 flex-1">
-                          <button type="button" onClick={() => openPersoon(p.slug, volgorde)} className="text-left">
+                          <button type="button" onClick={(e) => openPersoon(p.slug, volgorde, e.currentTarget.closest("[data-kaart]")?.querySelector<HTMLElement>("[data-avatar]") ?? undefined)} className="text-left">
                             <span className="block text-[16px] font-semibold hover:underline hover:underline-offset-2">
                               <Markeer tekst={p.naam} woorden={r.markeer} />
                             </span>

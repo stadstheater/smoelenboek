@@ -17,7 +17,8 @@ Intern smoelenboek van Stadstheater Zoetermeer: wie is wie en bij wie moet je zi
   - Structuur: per persoon afdeling, leidinggevende en volgorde, met controle op rondjes en een lijst aandachtspunten
   - Zoekwoorden: woorden die hetzelfde betekenen, met een testveld
   - Import en export: Excel (CSV) exporteren en importeren met eerst een voorstel. Daarnaast een volledige back-up (JSON) downloaden en terugzetten
-- **Licht en donker thema** uit de huisstijl, gedeeld met alle apps op stadstheater.app (map `thema/`).
+- **Licht en donker thema** uit de huisstijl, gedeeld met alle apps op stadstheater.app (map `thema/`). Wisselen groeit als een cirkel vanuit de knop.
+- **Vloeiende animaties**: pagina's schuiven zacht in, kaarten glijden naar hun nieuwe plek bij filteren en sorteren, de foto vliegt van de kaart naar de pop-up en bij sluiten weer terug, bladeren in de pop-up schuift in de juiste richting, vensters gaan zacht dicht, teams in het organigram klappen vloeiend in en uit en rijen in het beheer glijden bij een nieuwe volgorde. Met "minder beweging" aan op de computer of telefoon staat alles direct stil.
 
 ## Zo werkt het zoeken
 

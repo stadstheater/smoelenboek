@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { PersoonWeergave } from "@/lib/types";
 
 /** Drie tinten paars uit de huisstijl voor de initialen, steeds dezelfde per persoon */
@@ -28,17 +31,25 @@ export function Portret({
   prioriteit?: boolean;
 }) {
   const src = formaat === "groot" ? persoon.foto_groot : persoon.foto_klein;
+  // Welke foto al binnen is; zo faden foto's zacht in in plaats van regel voor regel te verschijnen
+  const [geladen, setGeladen] = useState<string | null>(null);
   if (src) {
     return (
       // Foto's komen van stadstheater.nl of uit onze eigen privé-route, dus een gewone img
       // eslint-disable-next-line @next/next/no-img-element
       <img
+        ref={(el) => {
+          // Uit de cache is de foto er al voordat React luistert
+          if (el?.complete && el.naturalWidth) setGeladen(src);
+        }}
         src={src}
         alt=""
         loading={prioriteit ? "eager" : "lazy"}
         decoding="async"
         draggable={false}
-        className={`h-full w-full object-cover object-top ${className}`}
+        onLoad={() => setGeladen(src)}
+        onError={() => setGeladen(src)}
+        className={`h-full w-full object-cover object-top transition-opacity duration-500 ease-out ${geladen === src ? "opacity-100" : "opacity-0"} ${className}`}
       />
     );
   }

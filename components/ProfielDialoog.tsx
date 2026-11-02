@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, ChevronRight, Copy, Mail, MapPin, MessageSquare, Pencil, Phone, Smartphone, X } from "lucide-react";
@@ -11,6 +11,9 @@ import { persoonlijkAdres } from "@/lib/foto";
 import { belbaar, datumLang, dienstjaren, maandJaar } from "@/lib/format";
 import { keten, ledenVan, team } from "@/lib/hierarchie";
 import { onthoudRecent } from "@/lib/recent";
+import { FILTER, minderBeweging } from "@/lib/animatie";
+import { useDialoog } from "@/lib/useDialoog";
+import { vliegFoto } from "@/lib/vlucht";
 import { DAGEN, type PersoonWeergave } from "@/lib/types";
 
 function Sectie({ titel, children }: { titel: string; children: ReactNode }) {
@@ -20,6 +23,12 @@ function Sectie({ titel, children }: { titel: string; children: ReactNode }) {
       {children}
     </section>
   );
+}
+
+/** Inhoud van één persoon; de animatie ligt vast zodra hij verschijnt, zodat de vorige inhoud niet opnieuw beweegt */
+function Inhoud({ animatie, children }: { animatie: string; children: ReactNode }) {
+  const [klasse] = useState(animatie);
+  return <div className={`grid gap-6 p-5 sm:grid-cols-[minmax(0,300px)_1fr] sm:gap-8 sm:p-8 ${klasse}`}>{children}</div>;
 }
 
 function MiniPersoon({ persoon, onKies, sub }: { persoon: PersoonWeergave; onKies: () => void; sub?: string }) {
@@ -37,34 +46,78 @@ function MiniPersoon({ persoon, onKies, sub }: { persoon: PersoonWeergave; onKie
   );
 }
 
-/** De pop-up met alles over één persoon. ← en → bladeren, Esc sluit. */
+/**
+ * De pop-up met alles over één persoon. ← en → bladeren, Esc sluit.
+ * Open je hem vanaf een kaart, dan vliegt de foto van de kaart naar de pop-up, en bij sluiten weer terug.
+ */
 export function ProfielDialoog({
   persoon,
   onSluit,
   onVorige,
   onVolgende,
+  richting = 0,
 }: {
   persoon: PersoonWeergave;
   onSluit: () => void;
   onVorige?: () => void;
   onVolgende?: () => void;
+  /** 1 na "volgende", -1 na "vorige", 0 bij openen of springen naar iemand anders */
+  richting?: number;
 }) {
-  const dialoog = useRef<HTMLDialogElement>(null);
   const router = useRouter();
   const toast = useToast();
-  const { gegevens, afdelingOpId, openPersoon, beheer } = useShell();
+  const { gegevens, afdelingOpId, openPersoon, beheer, vlucht, wisVlucht } = useShell();
   const [gekopieerdVoor, setGekopieerdVoor] = useState<string | null>(null);
   const gekopieerd = gekopieerdVoor === persoon.slug;
+  const foto = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const el = dialoog.current;
-    if (el && !el.open) el.showModal();
-  }, []);
+  // Bij sluiten vliegt de foto terug naar de kaart, als die kaart in beeld is
+  const { ref: dialoog, sluit } = useDialoog((dlg) => {
+    const el = foto.current;
+    if (!el || minderBeweging() || !window.matchMedia("(min-width: 640px)").matches) return;
+    const kaart = Array.from(document.querySelectorAll<HTMLElement>(`[data-foto="${CSS.escape(persoon.slug)}"]`)).find((k) => !dlg.contains(k));
+    const naar = kaart?.getBoundingClientRect();
+    if (!naar || !naar.width || naar.bottom < 0 || naar.top > window.innerHeight) return;
+    const { anim } = vliegFoto({ kopie: el, van: el.getBoundingClientRect(), naar, ouder: dlg, duur: 320, rondingVan: 16, rondingNaar: 12 });
+    el.style.visibility = "hidden";
+    return anim.finished;
+  });
+
+  // Openen vanaf een kaart: de foto vliegt van de kaart naar zijn plek in de pop-up
+  // Op de telefoon schuift het paneel van onderen omhoog, zoals in apps; daar vliegt de foto niet
+  const [metVlucht] = useState(
+    () => !!vlucht && vlucht.slug === persoon.slug && vlucht.van.width > 0 && !minderBeweging() && window.matchMedia("(min-width: 640px)").matches,
+  );
+  const gevlogen = useRef(false);
+  useLayoutEffect(() => {
+    if (gevlogen.current) return;
+    gevlogen.current = true;
+    const el = foto.current;
+    const dlg = dialoog.current;
+    if (!metVlucht || !vlucht || !el || !dlg) return;
+    const naar = el.getBoundingClientRect();
+    if (!naar.width) return;
+    const { geest, anim } = vliegFoto({ kopie: vlucht.kopie, van: vlucht.van, naar, ouder: dlg, duur: 480, rondingVan: 12, rondingNaar: 16 });
+    el.style.visibility = "hidden";
+    anim.finished
+      .then(() => {
+        el.style.visibility = "";
+        return geest.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" }).finished;
+      })
+      .catch(() => {})
+      .finally(() => geest.remove());
+    wisVlucht();
+  }, [metVlucht, vlucht, wisVlucht, dialoog]);
+
+  // Bij bladeren schuift de inhoud in de richting waarin je bladert
+  const [eersteId] = useState(persoon.id);
+  const inhoudAnimatie =
+    richting > 0 ? "animate-profiel-volgende" : richting < 0 ? "animate-profiel-vorige" : persoon.id === eersteId ? "" : "animate-profiel-wissel";
 
   useEffect(() => {
     onthoudRecent(persoon.slug);
     dialoog.current?.querySelector("[data-scroll]")?.scrollTo({ top: 0 });
-  }, [persoon.slug]);
+  }, [persoon.slug, dialoog]);
 
   useEffect(() => {
     function toets(e: KeyboardEvent) {
@@ -104,7 +157,7 @@ export function ProfielDialoog({
   }
 
   function zoekOp(trefwoord: string) {
-    dialoog.current?.close();
+    sluit();
     router.push(`/zoeken?q=${encodeURIComponent(trefwoord)}`);
   }
 
@@ -125,19 +178,24 @@ export function ProfielDialoog({
     <dialog
       ref={dialoog}
       onClose={onSluit}
-      onClick={(e) => e.target === e.currentTarget && dialoog.current?.close()}
+      onClick={(e) => e.target === e.currentTarget && sluit()}
       aria-labelledby="profiel-naam"
       className="paneel fixed inset-0 m-0 h-full w-full bg-transparent p-0 text-inkt"
     >
       <div
         className="flex h-full items-end justify-center sm:items-center sm:p-6"
-        onClick={(e) => e.target === e.currentTarget && dialoog.current?.close()}
+        onClick={(e) => e.target === e.currentTarget && sluit()}
       >
-        <div className="relative flex max-h-[92dvh] w-full max-w-4xl animate-sheet flex-col overflow-hidden rounded-t-2xl border border-sluier/10 bg-vlak-diep shadow-2xl shadow-schaduw/50 sm:max-h-[min(88dvh,820px)] sm:animate-pop sm:rounded-2xl">
+        <div
+          data-paneel="sheet"
+          className={`relative flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl border border-sluier/10 bg-vlak-diep shadow-2xl shadow-schaduw/50 sm:max-h-[min(88dvh,820px)] sm:rounded-2xl ${
+            metVlucht ? "animate-fade" : "animate-sheet sm:animate-pop"
+          }`}
+        >
           {/* Knoppen rechtsboven */}
           <div className="z-10 flex shrink-0 items-center justify-end gap-1 border-b border-sluier/[0.07] px-2 py-1.5 sm:absolute sm:top-3 sm:right-3 sm:border-0 sm:p-0">
             {beheer && (
-              <Link href={`/beheer/medewerkers/${persoon.id}`} className="knop knop-wit h-9" onClick={() => dialoog.current?.close()}>
+              <Link href={`/beheer/medewerkers/${persoon.id}`} className="knop knop-wit h-9" onClick={() => sluit()}>
                 <Pencil size={14} aria-hidden /> Bewerken
               </Link>
             )}
@@ -151,16 +209,16 @@ export function ProfielDialoog({
                 <ChevronRight size={18} />
               </button>
             )}
-            <button type="button" onClick={() => dialoog.current?.close()} className="knop knop-ghost knop-icoon" aria-label="Sluiten" title="Sluiten (Esc)">
+            <button type="button" onClick={() => sluit()} className="knop knop-ghost knop-icoon" aria-label="Sluiten" title="Sluiten (Esc)">
               <X size={18} />
             </button>
           </div>
 
           <div data-scroll tabIndex={-1} autoFocus className="dunne-scrollbar overflow-y-auto outline-none focus-visible:outline-none">
-            <div className="grid gap-6 p-5 sm:grid-cols-[minmax(0,300px)_1fr] sm:gap-8 sm:p-8">
+            <Inhoud key={persoon.id} animatie={inhoudAnimatie}>
               {/* Foto en acties */}
               <div className="space-y-4">
-                <div className="relative mx-auto aspect-square w-44 overflow-hidden rounded-2xl bg-sluier/[0.06] sm:w-full">
+                <div ref={foto} className="relative mx-auto aspect-square w-44 overflow-hidden rounded-2xl bg-sluier/[0.06] sm:w-full">
                   <Portret key={persoon.id} persoon={persoon} formaat="groot" prioriteit />
                 </div>
                 <div className="flex flex-wrap gap-2 sm:flex-col">
@@ -197,12 +255,12 @@ export function ProfielDialoog({
                 <div className="pr-0 sm:pr-28">
                   <div className="flex flex-wrap gap-1.5">
                     {afdeling && (
-                      <Link href={`/?afdeling=${afdeling.slug}`} onClick={() => dialoog.current?.close()} className="infoblokje hover:underline">
+                      <Link href={`/?afdeling=${afdeling.slug}`} transitionTypes={FILTER} onClick={() => sluit()} className="infoblokje hover:underline">
                         {afdeling.naam}
                       </Link>
                     )}
                     {extra.map((a) => (
-                      <Link key={a.id} href={`/?afdeling=${a.slug}`} onClick={() => dialoog.current?.close()} className="infoblokje infoblokje-licht hover:underline">
+                      <Link key={a.id} href={`/?afdeling=${a.slug}`} transitionTypes={FILTER} onClick={() => sluit()} className="infoblokje infoblokje-licht hover:underline">
                         {a.naam}
                       </Link>
                     ))}
@@ -392,7 +450,7 @@ export function ProfielDialoog({
 
                 <p className="pt-2 text-[11.5px] text-inkt-5">Bijgewerkt op {datumLang(persoon.bijgewerkt_op)}</p>
               </div>
-            </div>
+            </Inhoud>
           </div>
         </div>
       </div>

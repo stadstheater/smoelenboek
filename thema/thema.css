@@ -136,3 +136,10 @@
 :root[data-thema-wissel] *::after {
   transition: none !important;
 }
+
+/* Wisselen met de knop: het nieuwe thema groeit als cirkel over het oude (animatie in thema.ts) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}

@@ -1,34 +1,34 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2, X } from "lucide-react";
 import { slaAfdelingOpActie, verwijderAfdelingActie, zetVolgordeActie, type FormStatus } from "@/app/actions";
+import { Glijdt, metVolgorde } from "@/components/beheer/Glijdt";
 import { TrefwoordInvoer } from "@/components/beheer/TrefwoordInvoer";
 import { useShell } from "@/components/shell/AppShell";
 import { useToast } from "@/components/shell/Toasts";
+import { nieuwePlekken } from "@/lib/animatie";
 import { meervoud } from "@/lib/format";
 import { afdelingenInVolgorde, bovenliggendeMaaktRondje } from "@/lib/hierarchie";
+import { useDialoog } from "@/lib/useDialoog";
 import type { Afdeling } from "@/lib/types";
 
 function AfdelingVenster({ afdeling, onSluit }: { afdeling: Afdeling | null; onSluit: () => void }) {
   const { gegevens } = useShell();
   const router = useRouter();
   const toast = useToast();
-  const dialoog = useRef<HTMLDialogElement>(null);
+  const { ref: dialoog, sluit } = useDialoog();
   const [status, actie, bezig] = useActionState<FormStatus, FormData>(slaAfdelingOpActie, {});
   const [trefwoorden, setTrefwoorden] = useState<string[]>(afdeling?.trefwoorden ?? []);
 
-  useEffect(() => {
-    dialoog.current?.showModal();
-  }, []);
 
   useEffect(() => {
     if (!status.ok) return;
     toast(afdeling ? "Afdeling opgeslagen" : "Afdeling toegevoegd");
     router.refresh();
-    dialoog.current?.close();
-  }, [status, afdeling, router, toast]);
+    sluit();
+  }, [status, afdeling, router, toast, sluit]);
 
   const leden = gegevens.personen
     .filter((p) => afdeling && (p.afdeling_id === afdeling.id || p.extra_afdeling_ids.includes(afdeling.id)))
@@ -38,9 +38,12 @@ function AfdelingVenster({ afdeling, onSluit }: { afdeling: Afdeling | null; onS
 
   return (
     <dialog ref={dialoog} onClose={onSluit} aria-labelledby="afd-titel" className="paneel fixed inset-0 m-0 h-full w-full bg-transparent p-0 text-inkt">
-      <div className="flex h-full items-end justify-center sm:items-center sm:p-6" onClick={(e) => e.target === e.currentTarget && dialoog.current?.close()}>
-        <form action={actie} className="dunne-scrollbar relative max-h-[92dvh] w-full max-w-2xl animate-pop overflow-y-auto rounded-t-2xl border border-sluier/10 bg-vlak-diep p-6 shadow-2xl shadow-schaduw/50 sm:rounded-2xl">
-          <button type="button" onClick={() => dialoog.current?.close()} className="knop knop-ghost knop-icoon absolute top-3 right-3" aria-label="Sluiten">
+      <div className="flex h-full items-end justify-center sm:items-center sm:p-6" onClick={(e) => e.target === e.currentTarget && sluit()}>
+        <form
+          action={actie}
+          className="dunne-scrollbar relative max-h-[92dvh] w-full max-w-2xl animate-pop overflow-y-auto rounded-t-2xl border border-sluier/10 bg-vlak-diep p-6 shadow-2xl shadow-schaduw/50 sm:rounded-2xl"
+        >
+          <button type="button" onClick={() => sluit()} className="knop knop-ghost knop-icoon absolute top-3 right-3" aria-label="Sluiten">
             <X size={17} />
           </button>
           <h2 id="afd-titel" className="text-[18px] font-semibold">
@@ -57,7 +60,13 @@ function AfdelingVenster({ afdeling, onSluit }: { afdeling: Afdeling | null; onS
             </label>
             <label className="block sm:col-span-2">
               <span className="mb-1.5 block text-[13px] font-medium text-inkt-2">Korte beschrijving</span>
-              <textarea name="beschrijving" defaultValue={afdeling?.beschrijving ?? ""} rows={2} className="veld resize-y" placeholder="Waar houdt deze afdeling zich mee bezig?" />
+              <textarea
+                name="beschrijving"
+                defaultValue={afdeling?.beschrijving ?? ""}
+                rows={2}
+                className="veld resize-y"
+                placeholder="Waar houdt deze afdeling zich mee bezig?"
+              />
             </label>
             <label className="block">
               <span className="mb-1.5 block text-[13px] font-medium text-inkt-2">Hoofd of eerste aanspreekpunt</span>
@@ -93,7 +102,13 @@ function AfdelingVenster({ afdeling, onSluit }: { afdeling: Afdeling | null; onS
               </select>
             </label>
             <label className="flex items-start gap-3 sm:col-span-2">
-              <input name="soort" type="checkbox" value="toezicht" defaultChecked={afdeling?.soort === "toezicht"} className="mt-1 h-4 w-4 accent-[var(--stz-oranje)]" />
+              <input
+                name="soort"
+                type="checkbox"
+                value="toezicht"
+                defaultChecked={afdeling?.soort === "toezicht"}
+                className="mt-1 h-4 w-4 accent-[var(--stz-oranje)]"
+              />
               <span>
                 <span className="block text-[13.5px] font-medium">Toezicht of bestuur, geen medewerkers</span>
                 <span className="block text-[12px] text-inkt-4">Zoals de Raad van Toezicht: apart onderaan in het smoelenboek en los in het organigram.</span>
@@ -115,7 +130,7 @@ function AfdelingVenster({ afdeling, onSluit }: { afdeling: Afdeling | null; onS
             <button type="submit" disabled={bezig} className="knop knop-vol h-10 px-5">
               {bezig ? "Opslaan" : "Opslaan"}
             </button>
-            <button type="button" onClick={() => dialoog.current?.close()} className="knop knop-ghost h-10">
+            <button type="button" onClick={() => sluit()} className="knop knop-ghost h-10">
               Annuleren
             </button>
           </div>
@@ -131,7 +146,14 @@ export function AfdelingenBeheer() {
   const toast = useToast();
   const [open, setOpen] = useState<{ afdeling: Afdeling | null } | null>(null);
   const [bezig, startTransition] = useTransition();
-  const boom = useMemo(() => afdelingenInVolgorde(gegevens.afdelingen), [gegevens.afdelingen]);
+  const [schuift, setSchuift] = useState(false);
+  // Nieuwe volgorde direct tonen, ook voordat de server klaar is
+  const [lokaal, setLokaal] = useState<Record<string, number>>({});
+  const afdelingen = useMemo(
+    () => gegevens.afdelingen.map((a) => (lokaal[a.id] !== undefined ? { ...a, volgorde: lokaal[a.id] } : a)),
+    [gegevens.afdelingen, lokaal],
+  );
+  const boom = useMemo(() => afdelingenInVolgorde(afdelingen), [afdelingen]);
 
   function aantal(a: Afdeling) {
     return gegevens.personen.filter((p) => p.afdeling_id === a.id || p.extra_afdeling_ids.includes(a.id)).length;
@@ -145,11 +167,19 @@ export function AfdelingenBeheer() {
     if (j < 0 || j >= broers.length) return;
     const nieuw = [...broers];
     [nieuw[i], nieuw[j]] = [nieuw[j], nieuw[i]];
-    startTransition(async () => {
-      const r = await zetVolgordeActie("afdelingen", nieuw.map((x) => x.id));
-      if (r.fout) toast(r.fout, "fout");
-      router.refresh();
-    });
+    const plekken = nieuwePlekken(nieuw);
+    metVolgorde(() => setLokaal((oud) => ({ ...oud, ...plekken })));
+    // Bewaren buiten de overgang om, anders wacht de glij-animatie op de server
+    setSchuift(true);
+    zetVolgordeActie(
+      "afdelingen",
+      nieuw.map((x) => x.id),
+    )
+      .then((r) => {
+        if (r.fout) toast(r.fout, "fout");
+        router.refresh();
+      })
+      .finally(() => setSchuift(false));
   }
 
   function verwijder(a: Afdeling) {
@@ -177,33 +207,60 @@ export function AfdelingenBeheer() {
           const plek = broers.findIndex((x) => x.id === a.id);
           const hoofd = a.hoofd_id ? persoonOpId.get(a.hoofd_id) : undefined;
           return (
-            <li key={a.id} className="flex items-center gap-3 px-4 py-3" style={{ paddingLeft: `${1 + diepte * 1.5}rem` }}>
-              <div className="flex flex-col">
-                <button type="button" disabled={bezig || plek === 0} onClick={() => verschuif(a, -1)} className="rounded p-0.5 text-inkt-4 hover:text-inkt disabled:opacity-30" aria-label={`${a.naam} omhoog`}>
-                  <ArrowUp size={14} />
+            <Glijdt key={a.id} name={`afd-${a.id}`}>
+              <li className="flex items-center gap-3 px-4 py-3" style={{ paddingLeft: `${1 + diepte * 1.5}rem` }}>
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    disabled={bezig || schuift || plek === 0}
+                    onClick={() => verschuif(a, -1)}
+                    className="rounded p-0.5 text-inkt-4 hover:text-inkt disabled:opacity-30"
+                    aria-label={`${a.naam} omhoog`}
+                  >
+                    <ArrowUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={bezig || schuift || plek === broers.length - 1}
+                    onClick={() => verschuif(a, 1)}
+                    className="rounded p-0.5 text-inkt-4 hover:text-inkt disabled:opacity-30"
+                    aria-label={`${a.naam} omlaag`}
+                  >
+                    <ArrowDown size={14} />
+                  </button>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-2">
+                    <span className="font-display text-[19px] font-semibold tracking-wide uppercase">{a.naam}</span>
+                    {a.soort === "toezicht" && <span className="infoblokje infoblokje-licht">Toezicht</span>}
+                  </p>
+                  <p className="text-[12.5px] text-inkt-3">
+                    {meervoud(aantal(a), "persoon", "mensen")}
+                    {hoofd ? `, hoofd ${hoofd.naam}` : ", geen hoofd"}
+                    {a.trefwoorden.length ? `, ${meervoud(a.trefwoorden.length, "trefwoord", "trefwoorden")}` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setOpen({ afdeling: a })}
+                  className="knop knop-ghost knop-icoon"
+                  aria-label={`${a.naam} bewerken`}
+                  title="Bewerken"
+                >
+                  <Pencil size={15} />
                 </button>
-                <button type="button" disabled={bezig || plek === broers.length - 1} onClick={() => verschuif(a, 1)} className="rounded p-0.5 text-inkt-4 hover:text-inkt disabled:opacity-30" aria-label={`${a.naam} omlaag`}>
-                  <ArrowDown size={14} />
+                <button
+                  type="button"
+                  onClick={() => verwijder(a)}
+                  disabled={bezig}
+                  className="knop knop-ghost knop-icoon hover:text-rood!"
+                  aria-label={`${a.naam} verwijderen`}
+                  title="Verwijderen"
+                >
+                  <Trash2 size={15} />
                 </button>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-2">
-                  <span className="font-display text-[19px] font-semibold tracking-wide uppercase">{a.naam}</span>
-                  {a.soort === "toezicht" && <span className="infoblokje infoblokje-licht">Toezicht</span>}
-                </p>
-                <p className="text-[12.5px] text-inkt-3">
-                  {meervoud(aantal(a), "persoon", "mensen")}
-                  {hoofd ? `, hoofd ${hoofd.naam}` : ", geen hoofd"}
-                  {a.trefwoorden.length ? `, ${meervoud(a.trefwoorden.length, "trefwoord", "trefwoorden")}` : ""}
-                </p>
-              </div>
-              <button type="button" onClick={() => setOpen({ afdeling: a })} className="knop knop-ghost knop-icoon" aria-label={`${a.naam} bewerken`} title="Bewerken">
-                <Pencil size={15} />
-              </button>
-              <button type="button" onClick={() => verwijder(a)} disabled={bezig} className="knop knop-ghost knop-icoon hover:text-rood!" aria-label={`${a.naam} verwijderen`} title="Verwijderen">
-                <Trash2 size={15} />
-              </button>
-            </li>
+              </li>
+            </Glijdt>
           );
         })}
       </ul>

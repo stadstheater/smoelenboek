@@ -1,16 +1,36 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import { huidigThema, zetThema } from "./thema";
+
+/** Het nieuwe icoon draait en groeit erin */
+const ICOON_IN: Keyframe[] = [
+  { transform: "rotate(-90deg) scale(0.4)", opacity: 0 },
+  { transform: "none", opacity: 1 },
+];
+
+async function wissel(e: MouseEvent<HTMLButtonElement>) {
+  const knop = e.currentTarget;
+  const vak = knop.getBoundingClientRect();
+  await zetThema(huidigThema() === "licht" ? "donker" : "licht", {
+    x: vak.left + vak.width / 2,
+    y: vak.top + vak.height / 2,
+  });
+
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const icoon = Array.from(knop.querySelectorAll("svg")).find((svg) => svg.getClientRects().length > 0);
+  icoon?.animate(ICOON_IN, { duration: 500, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" });
+}
 
 /**
  * Wisselt tussen licht en donker. Welk icoon je ziet regelt de CSS (bij-licht, bij-donker),
- * dus de knop klopt al voordat React geladen is.
+ * dus de knop klopt al voordat React geladen is. Het nieuwe thema groeit als cirkel vanuit de knop.
  */
 export function ThemaKnop({ className = "" }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => zetThema(huidigThema() === "licht" ? "donker" : "licht")}
+      onClick={wissel}
       className={className}
       aria-label="Wissel tussen licht en donker thema"
       title="Licht of donker"

@@ -1,41 +1,39 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, X } from "lucide-react";
 import { pincodeActie, type FormStatus } from "@/app/actions";
 import { useToast } from "@/components/shell/Toasts";
+import { useDialoog } from "@/lib/useDialoog";
 
 /** Venster dat om de pincode voor het beheer vraagt */
 export function PincodeDialoog({ naar, onSluit }: { naar: string; onSluit: () => void }) {
-  const dialoog = useRef<HTMLDialogElement>(null);
+  const { ref: dialoog, sluit } = useDialoog();
   const router = useRouter();
   const toast = useToast();
   const [status, actie, bezig] = useActionState<FormStatus, FormData>(pincodeActie, {});
 
-  useEffect(() => {
-    dialoog.current?.showModal();
-  }, []);
 
   useEffect(() => {
     if (!status.ok) return;
     toast("Beheer is open");
-    dialoog.current?.close();
+    sluit();
     router.push(status.slug || "/beheer");
     router.refresh();
-  }, [status, router, toast]);
+  }, [status, router, toast, sluit]);
 
   return (
     <dialog
       ref={dialoog}
       onClose={onSluit}
-      onClick={(e) => e.target === e.currentTarget && dialoog.current?.close()}
+      onClick={(e) => e.target === e.currentTarget && sluit()}
       aria-labelledby="pincode-titel"
       className="paneel fixed inset-0 m-0 h-full w-full bg-transparent p-0 text-inkt"
     >
-      <div className="flex h-full items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && dialoog.current?.close()}>
-        <form action={actie} className="relative w-full max-w-sm animate-pop rounded-2xl border border-sluier/10 bg-vlak-diep p-6 shadow-2xl shadow-schaduw/50">
-          <button type="button" onClick={() => dialoog.current?.close()} className="knop knop-ghost knop-icoon absolute top-3 right-3" aria-label="Sluiten">
+      <div className="flex h-full items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && sluit()}>
+        <form data-paneel action={actie} className="relative w-full max-w-sm animate-pop rounded-2xl border border-sluier/10 bg-vlak-diep p-6 shadow-2xl shadow-schaduw/50">
+          <button type="button" onClick={() => sluit()} className="knop knop-ghost knop-icoon absolute top-3 right-3" aria-label="Sluiten">
             <X size={17} />
           </button>
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-sluier/[0.07] text-inkt-3">

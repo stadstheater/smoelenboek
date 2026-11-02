@@ -21,13 +21,20 @@ type Shell = {
   afdelingOpId: Map<string, Afdeling>;
   /** Iedereen in de volgorde van het smoelenboek: per afdeling, het hoofd eerst */
   standaardVolgorde: PersoonWeergave[];
-  openPersoon: (slug: string, lijst?: string[]) => void;
+  /** Opent de pop-up; met een bron (de foto die je aanklikte) vliegt de foto vanaf die plek naar de pop-up */
+  openPersoon: (slug: string, lijst?: string[], bron?: HTMLElement) => void;
   /** Volgorde om met ← en → door te bladeren in de pop-up */
   bladerLijst: string[] | null;
+  /** De foto waar de pop-up vandaan komt, alleen bij openen */
+  vlucht: Vlucht | null;
+  wisVlucht: () => void;
   openPincode: (naar?: string) => void;
   openMobielZoeken: () => void;
   registreerZoekveld: (el: HTMLInputElement | null) => void;
 };
+
+/** Waar de pop-up vandaan komt: plek en een kopie van de foto, vastgelegd op het moment van klikken */
+export type Vlucht = { slug: string; van: DOMRect; kopie: HTMLElement };
 
 const ShellContext = createContext<Shell | null>(null);
 
@@ -57,6 +64,8 @@ export function AppShell({
   const [pincode, setPincode] = useState<{ naar: string } | null>(null);
   const [mobielZoeken, setMobielZoeken] = useState(false);
   const [bladerLijst, setBladerLijst] = useState<string[] | null>(null);
+  const [vlucht, setVlucht] = useState<Vlucht | null>(null);
+  const wisVlucht = useCallback(() => setVlucht(null), []);
 
   const zoek = useMemo(() => maakZoeker(gegevens), [gegevens]);
   const persoonOpId = useMemo(() => new Map(gegevens.personen.map((p) => [p.id, p])), [gegevens.personen]);
@@ -76,9 +85,11 @@ export function AppShell({
     return uit;
   }, [gegevens]);
 
-  const openPersoon = useCallback((slug: string, lijst?: string[]) => {
+  const openPersoon = useCallback((slug: string, lijst?: string[], bron?: HTMLElement) => {
     setBladerLijst(lijst ?? null);
+    // Alleen vanaf een gesloten pop-up vliegen; binnen de pop-up wisselt de inhoud
     const al = new URLSearchParams(window.location.search).get("p");
+    setVlucht(bron && !al ? { slug, van: bron.getBoundingClientRect(), kopie: bron.cloneNode(true) as HTMLElement } : null);
     zetParams((p) => p.set("p", slug), al ? "replace" : "push");
   }, []);
 
@@ -126,6 +137,8 @@ export function AppShell({
     standaardVolgorde,
     openPersoon,
     bladerLijst,
+    vlucht,
+    wisVlucht,
     openPincode,
     openMobielZoeken,
     registreerZoekveld,

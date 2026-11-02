@@ -18,6 +18,10 @@
   --animate-pop: pop 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-toast: toast-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-toast-uit: toast-uit 220ms cubic-bezier(0.4, 0, 1, 1) both;
+  --animate-profiel-volgende: profiel-schuif 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-profiel-vorige: profiel-schuif-terug 360ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-profiel-wissel: profiel-wissel 300ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 /* Animaties (buiten @theme, zodat ze altijd in de CSS staan) */
@@ -417,4 +421,126 @@ mark.raak {
 .org-lijst-compact > li::before {
   left: -0.6rem;
   width: 0.45rem;
+}
+
+/* ---------- Vloeiende animaties ---------- */
+
+/* Één ritme voor de hele app: snel weg, rustig erin */
+:root {
+  --zacht: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duur-weg: 150ms;
+  --duur-in: 320ms;
+  --duur-verplaats: 420ms;
+}
+
+@keyframes toast-uit {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+@keyframes profiel-schuif {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes profiel-schuif-terug {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+@keyframes profiel-wissel {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(3px);
+  }
+}
+@keyframes vt-uit {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes vt-kaart-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+@keyframes vt-kaart-uit {
+  to {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+@keyframes paneel-weg {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes sheet-weg {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes backdrop-weg {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Vensters gaan net zo zacht dicht als ze opengaan */
+dialog.paneel[data-sluit]::backdrop {
+  animation: backdrop-weg 220ms ease-in both;
+}
+dialog.paneel[data-sluit] [data-paneel] {
+  animation: paneel-weg 200ms ease-in both;
+}
+@media (max-width: 639px) {
+  dialog.paneel[data-sluit] [data-paneel="sheet"] {
+    animation: sheet-weg 240ms cubic-bezier(0.4, 0, 1, 1) both;
+  }
+}
+
+/* Pagina's: de oude pagina gaat snel weg, de nieuwe komt rustig omhoog */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(.pagina-uit) {
+  animation: vt-uit var(--duur-weg) ease-in both;
+}
+::view-transition-new(.pagina-in) {
+  animation: vt-in var(--duur-in) var(--zacht) 60ms both;
+}
+
+/* Filteren en sorteren: kaarten glijden naar hun nieuwe plek */
+::view-transition-group(.kaart-verplaats) {
+  animation-duration: var(--duur-verplaats);
+  animation-timing-function: var(--zacht);
+}
+::view-transition-old(.kaart-uit) {
+  animation: vt-kaart-uit 180ms ease-in both;
+}
+::view-transition-new(.kaart-in) {
+  animation: vt-kaart-in 340ms var(--zacht) 80ms both;
+}
+
+/* Wie minder beweging wil, krijgt alles direct */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
 }

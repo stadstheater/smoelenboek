@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState, ViewTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDownAZ, LayoutList, Plus, UsersRound } from "lucide-react";
 import { PersoonKaart } from "@/components/PersoonKaart";
 import { useShell } from "@/components/shell/AppShell";
+import { FILTER } from "@/lib/animatie";
 import { meervoud } from "@/lib/format";
 import { afdelingenInVolgorde, ledenVan } from "@/lib/hierarchie";
 import type { Afdeling, PersoonWeergave } from "@/lib/types";
-import { zetParams } from "@/lib/url";
 
 type Groep = { id: string; titel: string; beschrijving: string | null; afdeling?: Afdeling; personen: PersoonWeergave[]; diepte: number };
 
@@ -19,9 +19,33 @@ function voornaamSort(a: PersoonWeergave, b: PersoonWeergave) {
   return a.naam.localeCompare(b.naam, "nl");
 }
 
+
+/** Beweegt alleen mee bij filteren en sorteren, niet bij andere overgangen */
+function Beweegt({ name, children }: { name?: string; children: ReactNode }) {
+  return (
+    <ViewTransition
+      name={name}
+      share={{ filter: "kaart-verplaats", default: "none" }}
+      update={{ filter: "kaart-verplaats", default: "none" }}
+      enter={{ filter: "kaart-in", default: "none" }}
+      exit={{ filter: "kaart-uit", default: "none" }}
+      default="none"
+    >
+      {children}
+    </ViewTransition>
+  );
+}
+
 export function Overzicht() {
   const { gegevens, openPersoon, beheer, afdelingOpId } = useShell();
+  const router = useRouter();
   const params = useSearchParams();
+  // Kaarten verschijnen alleen gespreid bij binnenkomst, niet bij elke filterwissel
+  const [binnenkomst, setBinnenkomst] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setBinnenkomst(false), 1500);
+    return () => clearTimeout(t);
+  }, []);
   const gekozenSlug = params.get("afdeling");
   const sorteer = params.get("sorteer") === "naam" ? "naam" : "afdeling";
 
@@ -90,15 +114,17 @@ export function Overzicht() {
   return (
     <div className="mx-auto max-w-[1800px] px-4 pt-6 sm:px-6 lg:px-10 lg:pt-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">Stadstheater Zoetermeer</p>
-          <h1 className="kop mt-2 text-[clamp(2.6rem,6vw,4.25rem)]">{gekozen ? gekozen.naam : "Smoelenboek"}</h1>
-          <p className="mt-2 max-w-2xl text-[14px] text-inkt-3">
-            {gekozen
-              ? gekozen.beschrijving ?? meervoud(telling.get(gekozen.id) ?? 0, "persoon", "mensen")
-              : `${meervoud(medewerkers, "collega", "collega's")} in ${meervoud(aantalAfdelingen, "afdeling", "afdelingen")}. Zoek bovenin op naam, functie of waarvoor je iemand nodig hebt.`}
-          </p>
-        </div>
+        <Beweegt>
+          <div>
+            <p className="eyebrow">Stadstheater Zoetermeer</p>
+            <h1 className="kop mt-2 text-[clamp(2.6rem,6vw,4.25rem)]">{gekozen ? gekozen.naam : "Smoelenboek"}</h1>
+            <p className="mt-2 max-w-2xl text-[14px] text-inkt-3">
+              {gekozen
+                ? (gekozen.beschrijving ?? meervoud(telling.get(gekozen.id) ?? 0, "persoon", "mensen"))
+                : `${meervoud(medewerkers, "collega", "collega's")} in ${meervoud(aantalAfdelingen, "afdeling", "afdelingen")}. Zoek bovenin op naam, functie of waarvoor je iemand nodig hebt.`}
+            </p>
+          </div>
+        </Beweegt>
         <div role="group" aria-label="Sorteren" className="flex shrink-0 rounded-lg border border-sluier/10 bg-sluier/[0.03] p-0.5">
           {(
             [
@@ -112,7 +138,14 @@ export function Overzicht() {
                 key={waarde}
                 type="button"
                 aria-pressed={aan}
-                onClick={() => zetParams((p) => (waarde === "naam" ? p.set("sorteer", "naam") : p.delete("sorteer")))}
+                onClick={() => {
+                  const p = new URLSearchParams(params.toString());
+                  if (waarde === "naam") p.set("sorteer", "naam");
+                  else p.delete("sorteer");
+                  p.delete("p");
+                  const q = p.toString();
+                  router.replace(q ? `/?${q}` : "/", { scroll: false, transitionTypes: FILTER });
+                }}
                 className={`flex h-8 items-center gap-1.5 rounded-md px-3 text-[12.5px] font-semibold transition-colors ${
                   aan ? "bg-sluier/[0.12] text-inkt" : "text-inkt-4 hover:text-inkt"
                 }`}
@@ -129,6 +162,7 @@ export function Overzicht() {
         <Link
           href={sorteer === "naam" ? "/?sorteer=naam" : "/"}
           scroll={false}
+          transitionTypes={FILTER}
           aria-current={!gekozen ? "true" : undefined}
           className={`chip h-8 shrink-0 px-3 text-[13px] transition-colors ${!gekozen ? "bg-basis-paars! text-white!" : "hover:bg-sluier/[0.12] hover:text-inkt"}`}
         >
@@ -144,6 +178,7 @@ export function Overzicht() {
                 key={afdeling.id}
                 href={aan ? (sorteer === "naam" ? "/?sorteer=naam" : "/") : href}
                 scroll={false}
+                transitionTypes={FILTER}
                 aria-current={aan ? "true" : undefined}
                 className={`chip h-8 shrink-0 gap-1.5 px-3 text-[13px] transition-colors ${aan ? "bg-basis-paars! text-white!" : "hover:bg-sluier/[0.12] hover:text-inkt"}`}
               >
@@ -178,24 +213,34 @@ export function Overzicht() {
               aria-labelledby={`kop-${groep.id}`}
               className={`scroll-mt-24 ${eersteToezicht && !gekozen ? "border-t border-sluier/[0.1] pt-12" : ""}`}
             >
-              <div className={`mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 ${groep.diepte ? "pl-4" : ""}`}>
-                <h2 id={`kop-${groep.id}`} className="kop text-[clamp(1.6rem,3vw,2.1rem)]">
-                  {groep.titel}
-                </h2>
-                <span className="text-[13px] tabular-nums text-inkt-4">{meervoud(groep.personen.length, "persoon", "mensen")}</span>
-                {isToezicht && <span className="infoblokje infoblokje-licht">Toezicht, geen medewerkers</span>}
-                {groep.beschrijving && sorteer === "afdeling" && !gekozen && <p className="w-full text-[13px] text-inkt-3">{groep.beschrijving}</p>}
-              </div>
+              <Beweegt name={`kop-${groep.id}`}>
+                <div className={`mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 ${groep.diepte ? "pl-4" : ""}`}>
+                  <h2 id={`kop-${groep.id}`} className="kop text-[clamp(1.6rem,3vw,2.1rem)]">
+                    {groep.titel}
+                  </h2>
+                  <span className="text-[13px] tabular-nums text-inkt-4">{meervoud(groep.personen.length, "persoon", "mensen")}</span>
+                  {isToezicht && <span className="infoblokje infoblokje-licht">Toezicht, geen medewerkers</span>}
+                  {groep.beschrijving && sorteer === "afdeling" && !gekozen && <p className="w-full text-[13px] text-inkt-3">{groep.beschrijving}</p>}
+                </div>
+              </Beweegt>
               <ul className={RASTER}>
                 {groep.personen.map((p) => (
                   <li key={p.id}>
-                    <PersoonKaart
-                      persoon={p}
-                      index={index++}
-                      leidt={sorteer === "afdeling" && groep.afdeling?.hoofd_id === p.id && groep.personen.length > 1}
-                      sub={groep.afdeling && p.afdeling_id !== groep.afdeling.id ? `Ook bij ${afdelingOpId.get(p.afdeling_id ?? "")?.naam ?? "andere afdeling"}` : null}
-                      onOpen={() => openPersoon(p.slug, volgorde)}
-                    />
+                    {/* Dezelfde naam in beide weergaven, zodat een kaart van zijn oude naar zijn nieuwe plek glijdt */}
+                    <Beweegt name={p.afdeling_id === groep.afdeling?.id || !groep.afdeling ? `kaart-${p.id}` : `kaart-${p.id}-${groep.id}`}>
+                      <PersoonKaart
+                        persoon={p}
+                        index={index++}
+                        gespreid={binnenkomst}
+                        leidt={sorteer === "afdeling" && groep.afdeling?.hoofd_id === p.id && groep.personen.length > 1}
+                        sub={
+                          groep.afdeling && p.afdeling_id !== groep.afdeling.id
+                            ? `Ook bij ${afdelingOpId.get(p.afdeling_id ?? "")?.naam ?? "andere afdeling"}`
+                            : null
+                        }
+                        onOpen={(bron) => openPersoon(p.slug, volgorde, bron)}
+                      />
+                    </Beweegt>
                   </li>
                 ))}
               </ul>
