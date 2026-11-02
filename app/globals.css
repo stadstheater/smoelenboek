@@ -405,36 +405,6 @@ mark.raak {
   border-top: 1px solid color-mix(in oklab, var(--stz-sluier) 18%, transparent);
 }
 
-/* Lijnenspel uit de huisstijl: kader met in alle vier de hoeken een schuine rand van 135 graden */
-.lijnenspel {
-  --lijn-kleur: var(--stz-basis-paars);
-  --grond: var(--stz-vlak);
-  --lijn: 1.34px;
-  --hoek: 18px;
-  isolation: isolate;
-}
-.lijnenspel::before,
-.lijnenspel::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-}
-.lijnenspel::before {
-  inset: 0;
-  background: var(--lijn-kleur);
-  clip-path: polygon(var(--hoek) 0, calc(100% - var(--hoek)) 0, 100% var(--hoek), 100% calc(100% - var(--hoek)), calc(100% - var(--hoek)) 100%, var(--hoek) 100%, 0 calc(100% - var(--hoek)), 0 var(--hoek));
-}
-.lijnenspel::after {
-  inset: var(--lijn);
-  background: var(--grond);
-  --h: calc(var(--hoek) - var(--lijn) * 0.4142);
-  clip-path: polygon(var(--h) 0, calc(100% - var(--h)) 0, 100% var(--h), 100% calc(100% - var(--h)), calc(100% - var(--h)) 100%, var(--h) 100%, 0 calc(100% - var(--h)), 0 var(--h));
-}
-.lijnenspel-op-donker {
-  --lijn-kleur: #fff;
-  --grond: var(--stz-donker-paars);
-}
-
 /* Containers die alleen focus krijgen om het toetsenbord goed te zetten, geen focusrand */
 [tabindex="-1"]:focus-visible {
   outline: none;

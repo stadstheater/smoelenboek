@@ -30,7 +30,7 @@ export function LoginFormulier() {
       <button type="submit" disabled={bezig} className="knop knop-vol h-11 w-full">
         {bezig ? "Controleren" : "Inloggen"} {!bezig && <ArrowRight size={16} aria-hidden />}
       </button>
-      <p className="text-[12px] text-inkt-4">Het wachtwoord krijg je van het marketingteam. Het is hetzelfde voor iedereen.</p>
+      <p className="text-[12px] text-inkt-4">Het wachtwoord krijg je van het marketingteam.</p>
     </form>
   );
 }
